@@ -1,77 +1,104 @@
-<script>
+<script setup>
 import { ref } from 'vue';
 import axios from 'axios';
-// import { LMap, LTileLayer, LMarker } from "vue-leaflet";
-// import "leaflet/dist/leaflet.css";
 
-const city = ref('Kyiv');
+const city = ref('');
 const cityData = ref(null);
-//const weatherData = ref(null);
-const cityImage = ref(null);
+const loading = ref(false);
+const error = ref(null);
+
 const fetchCityData = async () => {
+  if (!city.value.trim()) return;
+
+  loading.value = true;
+  error.value = null;
+  cityData.value = null;
+
   try {
-    // Отримуємо координати та основну інформацію про місто
-    const geoResponse = await axios.get(
-      `http://api.geonames.org/searchJSON?q=${city.value}&maxRows=1&username=demo`
-    );
-
-    if (geoResponse.data.geonames.length > 0) {
-      cityData.value = geoResponse.data.geonames[0];
-      // const { lat, lng } = cityData.value;
-
-      // Отримуємо погоду
-      // const weatherResponse = await axios.get(
-      //   `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=YOUR_OPENWEATHER_API_KEY&units=metric`
-      // );
-      // weatherData.value = weatherResponse.data;
-
-      // Отримуємо зображення міста
-      const imageResponse = await axios.get(
-        `https://api.unsplash.com/search/photos?query=${city.value}&client_id=3BwYZnd3iBe-q_WZiwhHJmWhYHujHnopQyt3g_8PQmM`
-      );
-      cityImage.value = imageResponse.data.results[0]?.urls.regular;
-    }
+    const response = await axios.get(`http://localhost:3000/city/${encodeURIComponent(city.value)}`);
+    cityData.value = response.data;
   } catch (error) {
-    console.error('Помилка при отриманні даних:', error);
+    error.value = 'Не вдалося отримати інформацію. Спробуйте інше місто.';
+  } finally {
+    loading.value = false;
   }
 };
-
-fetchCityData();
 </script>
 
 <template>
-  <div class="city-info">
-    <h2>Інформація про місто: {{ city }}</h2>
-    <div v-if="cityData">
-      <p><strong>Країна:</strong> {{ cityData.countryName }}</p>
-      <p><strong>Населення:</strong> {{ cityData.population }}</p>
-    </div>
-    <div v-if="weatherData">
-      <p><strong>Погода:</strong> {{ weatherData.weather[0].description }}</p>
-      <p><strong>Температура:</strong> {{ weatherData.main.temp }}°C</p>
-    </div>
-    <img v-if="cityImage" :src="cityImage" alt="City Image" class="city-image" />
-    <!-- <LMap v-if="cityData" :zoom="10" :center="[cityData.lat, cityData.lng]" class="map">
-      <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <LMarker :lat-lng="[cityData.lat, cityData.lng]" />
-    </LMap> -->
+  <div class="city-search">
+    <input
+      v-model="city"
+      type="text"
+      placeholder="Введіть назву міста"
+      @keyup.enter="fetchCityData"
+    />
+    <button @click="fetchCityData">Шукати</button>
   </div>
+
+  <div v-if="loading">Завантаження...</div>
+  <div v-if="error" class="error">{{ error }}</div>
+
+  <div class="infocard">
+    <div class="city-info" v-if="cityData">
+      <h2>Інформація про місто: {{ cityData.city }}</h2>
+      <p><strong>Країна:</strong> {{ cityData.country }}</p>
+      <p><strong>Опис:</strong> {{ cityData.description }}</p>
+      <img v-if="cityData.image" :src="cityData.image" alt="City Image" class="city-image" />
+    </div>
+  </div>
+
 </template>
 
 <style>
+.city-search {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.city-search input {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+
+.city-search button {
+  padding: 8px 12px;
+  background: purple;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.error {
+  color: red;
+  text-align: center;
+  margin-top: 10px;
+}
+
 .city-info {
   text-align: center;
   margin: 20px auto;
   max-width: 600px;
 }
+
 .city-image {
   width: 100%;
   border-radius: 10px;
   margin-top: 15px;
 }
-.map {
-  height: 300px;
+h2{
+  font-size: 36px;
+}
+.city-info{
+  margin: 50px;
+}
+.infocard{
+  border: 1px solid #ccc;
+  border-radius: 10px;
   width: 100%;
-  margin-top: 15px;
 }
 </style>
